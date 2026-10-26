@@ -1,0 +1,29 @@
+# macOS 系统文件
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# 敏感与本地配置（.env.example 是占位模板，允许提交）
+*.env
+.env.*
+!.env.example
+config.local.*
+secrets/
+*.pem
+*.key
+*.p12
+*.keystore
+id_rsa*
+
+# 依赖与缓存
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 编辑器与临时文件
+.idea/
+.vscode/
+*.log
+*.tmp
