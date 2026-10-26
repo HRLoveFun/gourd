@@ -10,12 +10,19 @@ gourd/
 ├── CATALOG.md           技能索引表
 ├── .gitignore
 ├── LICENSE              MIT
-└── skills/
-    ├── _template/       新建技能的模板，复制后改名使用
-    │   ├── SKILL.md
-    │   └── assets/
-    └── <skill-name>/    实际技能，一个目录一个技能
+├── template/            新建技能的模板，复制后改名使用
+│   ├── SKILL.md
+│   ├── assets/
+│   └── references/
+└── skills/              实际技能，一个目录一个技能
+    └── <skill-name>/
+        ├── SKILL.md
+        ├── assets/
+        ├── references/
+        └── scripts/
 ```
+
+模板放在根目录 `template/`，不放进 `skills/`。原因：Agent 规范要求 `SKILL.md` 的 `name` 与父目录名一致，`skills/` 下只留能直接加载的真实技能，避免模板被当成技能加载时报错。
 
 ## 使用前提
 
@@ -55,20 +62,24 @@ mkdir -p ~/.claude/skills && cp -r skills/log-cleanup ~/.claude/skills/
 
 ## 新增一个技能
 
-1. 复制模板：`cp -r skills/_template skills/your-skill-name`
-   （目录名用英文小写 + 连字符，如 `log-cleanup`）
+1. 复制模板：`cp -r template skills/your-skill-name`
+   （目录名用英文小写字母、数字、连字符，如 `log-cleanup`）
 2. 改 `SKILL.md` 开头的 `name`（与目录名完全一致）和 `description`（写清"做什么 + 什么时候用"，Agent 靠这句话决定是否加载）
 3. 脚本、配置、示例数据都放进该目录，不要放仓库根目录
-4. 在 `CATALOG.md` 里加一行
-5. 提交：`git add -A && git commit -m "add: your-skill-name"`
+4. 参考过的资料按 MLA 记进 `SKILL.md` 同级的 `references/SOURCES.md`
+5. 在 `CATALOG.md` 里加一行
+6. 提交：`git add -A && git commit -m "add: your-skill-name"`
 
 ## 约定
 
-- 一个技能一个目录，目录名英文小写 + 连字符
+- 一个技能一个目录，目录名只用英文小写字母、数字、连字符
 - 目录自包含：说明、脚本、配置、资源都放在目录内
 - 文档用中文；目录名、文件名、命令用英文
-- 复制或改编他人代码时，必须在 `SKILL.md` 的「来源与许可证」小节注明出处与原许可证
+- 参考资料只收 MLA 格式的引用与链接，写在 `references/SOURCES.md`，不复制他人文档原文
+- 单个文件超过约 200KB 的二进制素材（PDF、大图、音视频、数据集）不入库，改留链接
+- 改编他人代码时，在 `SKILL.md` 的「来源与许可证」注明原仓库与原许可证
 - 任何密钥、token、个人隐私配置都不进仓库（`.gitignore` 已拦截常见形式）
+- 两个以上技能共用的资料暂不设共享目录；真出现时再加，并在本文件说明
 
 ## 许可证
 
