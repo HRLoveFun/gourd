@@ -34,11 +34,11 @@ gourd/
 
 ```bash
 # SSH 方式（需已配置 SSH key）
-git clone git@github.com:<你的GitHub用户名>/gourd.git
+git clone git@github.com:HRLoveFun/gourd.git
 cd gourd
 ```
 
-不想用 SSH 就用网页上的 HTTPS 地址：`git clone https://github.com/<你的GitHub用户名>/gourd.git`。
+不想用 SSH 就用网页上的 HTTPS 地址：`git clone https://github.com/HRLoveFun/gourd.git`。
 
 ## 技能索引
 
