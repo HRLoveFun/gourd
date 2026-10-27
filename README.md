@@ -88,6 +88,8 @@ mkdir -p ~/.claude/skills && cp -r skills/log-cleanup ~/.claude/skills/
 | `staleness.sh --all --network` | **仅报告不拦路**，外网抖动不该变红灯 |
 | CATALOG 一致性 | 目录与索引表对不上 |
 
+另外约定：改动 `description`（技能接口）时，commit 首行加 `L3:` 前缀并写清旧接口与新接口的差异。语义判断无法自动化，工具只查结构。
+
 本地等价命令：
 
 ```bash

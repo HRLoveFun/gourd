@@ -151,6 +151,19 @@ lint_one() {
     fi
   done
 
+  # 6b. 接口摘要（唯一能让 description 与实际能力并排可见的机制）
+  if grep -q '^\*\*接口摘要\*\*' "$skill"; then
+    local brief_line
+    brief_line=$(grep -m1 '^\*\*接口摘要\*\*' "$skill")
+    if [ "${#brief_line}" -lt 20 ]; then
+      warnf "接口摘要过短，未写清「接受什么、产出什么」"
+    else
+      ok "有接口摘要"
+    fi
+  else
+    warnf "「用途」节缺 **接口摘要**：能力变化时，description 矛盾将无人可见"
+  fi
+
   # 7. SOURCES.md 与 healthcheck
   local src="$dir/references/SOURCES.md"
   if [ -f "$src" ]; then
