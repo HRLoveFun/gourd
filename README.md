@@ -8,6 +8,7 @@
 gourd/
 ├── README.md            本文件
 ├── CATALOG.md           技能索引表
+├── .github/workflows/   CI：每次提交跑约定检查与时效体检
 ├── .gitignore
 ├── LICENSE              MIT
 ├── template/            新建技能的模板，复制后改名使用
@@ -15,6 +16,11 @@ gourd/
 │   ├── assets/
 │   └── references/
 └── skills/              实际技能，一个目录一个技能
+    ├── skill-forge/     元技能：把材料提炼成技能 + 体检
+    │   ├── SKILL.md
+    │   ├── assets/
+    │   ├── references/
+    │   └── scripts/
     └── <skill-name>/
         ├── SKILL.md
         ├── assets/
@@ -42,7 +48,15 @@ cd gourd
 
 ## 技能索引
 
-见 [CATALOG.md](CATALOG.md)。当前只有模板，实际技能尚未迁入。
+见 [CATALOG.md](CATALOG.md)。
+
+第一个技能是 [skills/skill-forge/](skills/skill-forge/)——元技能：把材料提炼成新技能，并负责既有技能的体检与修订。新技能优先用它起：
+
+```bash
+./skills/skill-forge/scripts/new-skill.sh <skill-name> "<一句话用途>"
+./skills/skill-forge/scripts/lint-skill.sh <skill-name>   # 提交前必过
+./skills/skill-forge/scripts/staleness.sh --all           # 定期时效体检
+```
 
 ## 怎么给 Agent 用
 
@@ -60,15 +74,47 @@ mkdir -p ~/.claude/skills && cp -r skills/log-cleanup ~/.claude/skills/
 
 其他 Agent 的技能目录位置以各自文档为准；不确定时用方式 1。
 
+## 持续集成
+
+`.github/workflows/skills-ci.yml` 在每次 push 与 PR 时跑，顺序固定：
+
+| 步骤 | 失败意味着 |
+| --- | --- |
+| `bash -n` | 脚本有语法错误（先于业务检查，避免误判） |
+| `shellcheck --severity=warning` | 有真实可修的坑，不是风格问题 |
+| 可执行位检查 | 脚本在 git 里丢了 `100755`，克隆后无法直接执行 |
+| `lint-skill.sh --all` | 违反仓库约定（命名、frontmatter、healthcheck 缺失等） |
+| `staleness.sh --all` | 锚点断了或 TTL 超期，技能已不可信 |
+| `staleness.sh --all --network` | **仅报告不拦路**，外网抖动不该变红灯 |
+| CATALOG 一致性 | 目录与索引表对不上 |
+
+本地等价命令：
+
+```bash
+./skills/skill-forge/scripts/lint-skill.sh --all
+./skills/skill-forge/scripts/staleness.sh --all
+```
+
+时效体检对链接的探测受网络限制，CI 上单独一步且 `continue-on-error`，结果只作参考。
+
 ## 新增一个技能
+
+推荐用元技能 `skill-forge` 走完整流程（含准入判断、切分、三测、healthcheck）：
+
+```bash
+./skills/skill-forge/scripts/new-skill.sh your-skill-name "一句话用途"
+```
+
+手工流程等价于下面几步：
 
 1. 复制模板：`cp -r template skills/your-skill-name`
    （目录名用英文小写字母、数字、连字符，如 `log-cleanup`）
-2. 改 `SKILL.md` 开头的 `name`（与目录名完全一致）和 `description`（写清"做什么 + 什么时候用"，Agent 靠这句话决定是否加载）
+2. 改 `SKILL.md` 开头的 `name`（与目录名完全一致）和 `description`（写清"做什么 + 什么时候用 + 不适用于什么"，Agent 靠这句话决定是否加载）
 3. 脚本、配置、示例数据都放进该目录，不要放仓库根目录
-4. 参考过的资料按 MLA 记进 `SKILL.md` 同级的 `references/SOURCES.md`
+4. 参考过的资料按 MLA 记进 `SKILL.md` 同级的 `references/SOURCES.md`，并在其中的 `healthcheck` 块声明锚点
 5. 在 `CATALOG.md` 里加一行
-6. 提交：`git add -A && git commit -m "add: your-skill-name"`
+6. 跑 `./skills/skill-forge/scripts/lint-skill.sh your-skill-name`，退出码 0 再提交
+7. 提交：`git add -A && git commit -m "add: your-skill-name"`
 
 ## 约定
 
@@ -80,6 +126,7 @@ mkdir -p ~/.claude/skills && cp -r skills/log-cleanup ~/.claude/skills/
 - 改编他人代码时，在 `SKILL.md` 的「来源与许可证」注明原仓库与原许可证
 - 任何密钥、token、个人隐私配置都不进仓库（`.gitignore` 已拦截常见形式）
 - 两个以上技能共用的资料暂不设共享目录；真出现时再加，并在本文件说明
+- 每个技能的 `references/SOURCES.md` 带一个 `healthcheck` 块（锚点 + 探针 + 复核周期），供 `staleness.sh` 检查时效
 
 ## 许可证
 
