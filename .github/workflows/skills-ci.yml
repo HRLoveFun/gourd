@@ -1,0 +1,107 @@
+name: skills-ci
+
+# 目的：让"技能可用性"不依赖人记得跑。
+# 三件事必须在每次改动时自动验证，缺任何一个都会退化成"靠自觉"：
+#   1. shell 脚本能过 shellcheck（语法与常见坑）
+#   2. 每个技能过闸门 C（lint-skill.sh，仓库约定）
+#   3. 每个技能的锚点没断、TTL 没超期（staleness.sh）
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:        # 允许手动触发，便于发版前自查
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-staleness:
+    name: 闸门 C + 时效体检
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 检出
+        uses: actions/checkout@v4
+
+      - name: 安装 shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck
+
+      - name: 打印环境（排查用）
+        run: |
+          bash --version | head -1
+          awk --version 2>/dev/null | head -1 || awk -W version 2>&1 | head -1
+          git --version
+
+      # 脚本自身的语法错误要在跑业务检查前就暴露，
+      # 否则 lint-skill.sh 崩掉会被误读成"技能有问题"
+      - name: bash 语法检查
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            if ! bash -n "$f"; then
+              echo "::error file=$f::bash 语法错误"
+              fail=1
+            fi
+          done < <(find . -type f -name '*.sh' -not -path './.git/*')
+          exit "$fail"
+
+      - name: shellcheck
+        run: |
+          # SC1091: 不追踪外部 source；其余告警一律不放行
+          shellcheck --version
+          find . -type f -name '*.sh' -not -path './.git/*' -print0 \
+            | xargs -0 shellcheck --exclude=SC1091 --severity=warning
+
+      - name: 脚本可执行位
+        run: |
+          miss=0
+          while IFS= read -r f; do
+            if [ ! -x "$f" ]; then
+              echo "::error file=$f::脚本缺少可执行位（git 里应为 mode 100755）"
+              miss=1
+            fi
+          done < <(find . -type f -name '*.sh' -not -path './.git/*')
+          exit "$miss"
+
+      - name: 闸门 C — 仓库约定合规
+        run: ./skills/skill-forge/scripts/lint-skill.sh --all
+
+      - name: 时效体检 — 锚点与 TTL
+        run: ./skills/skill-forge/scripts/staleness.sh --all
+
+      # --network 单独一步且允许失败：链接探测受网络影响，
+      # 让它"只报告不拦路"，避免把外部抖动变成红灯
+      - name: 时效体检 — 链接探测（仅报告）
+        continue-on-error: true
+        run: ./skills/skill-forge/scripts/staleness.sh --all --network
+
+      - name: CATALOG 与目录一致性
+        run: |
+          # 目录里有技能却没登记，或登记了却已删目录，都算失败
+          fail=0
+          for d in skills/*/; do
+            [ -d "$d" ] || continue
+            n=$(basename "$d")
+            if ! grep -q "| ${n} " CATALOG.md; then
+              echo "::error::skills/${n}/ 未在 CATALOG.md 登记"
+              fail=1
+            fi
+          done
+          # 只认表格数据行：以 | 开头、第二列是合法技能名、且不是分隔行或表头
+          while IFS= read -r n; do
+            case "$n" in ''|技能名称) continue ;; esac
+            if [ ! -d "skills/${n}" ]; then
+              echo "::error::CATALOG.md 登记了 ${n}，但 skills/${n}/ 不存在（已废弃应改状态，不要删行）"
+              fail=1
+            fi
+          done < <(awk -F'|' '
+            /^\|[[:space:]]*[a-z0-9-]+[[:space:]]*\|/ {
+              n=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", n)
+              if (n == "---" || n == "技能名称" || n ~ /^-+$/) next
+              print n
+            }' CATALOG.md)
+          exit "$fail"
