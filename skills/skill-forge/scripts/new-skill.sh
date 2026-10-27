@@ -97,7 +97,7 @@ cat > "$DEST/references/SOURCES.md" <<EOF
 > 只锚**本技能依赖的外部前提**，不要锚本技能自己的产物（否则永远自洽，等于没检查）。
 
 \`\`\`yaml
-review_every_days: 90
+review_every_days: 5
 last_reviewed: $TODAY
 version: 0.1.0
 

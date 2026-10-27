@@ -156,11 +156,15 @@ check_skill() {
     else
       te=$(( (NOW - re) / 86400 ))
       days=$(( every - te ))
+      # 提前告警线：周期的 15%，至少 1 天。
+      # 硬编码 14 天在周期 <= 14 天时会永久告警，把 CI 拖成常态红灯。
+      lead=$(( every * 15 / 100 ))
+      [ "$lead" -lt 1 ] && lead=1
       if [ "$te" -gt "$every" ]; then
         echo "  STALE TTL   已 $te 天未复核（阈值 ${every}，超期 $((te-every)) 天）"
         fail=$((fail+1))
-      elif [ "$days" -le 14 ]; then
-        echo "  WARN  TTL   距下次复核还有 $days 天（$reviewed 起 ${every} 天）"
+      elif [ "$days" -le "$lead" ]; then
+        echo "  WARN  TTL   距下次复核还有 $days 天（$reviewed 起 ${every} 天，提前告警线 ${lead} 天）"
         warn=$((warn+1))
       else
         echo "  OK     TTL   $te/${every} 天，还有 $days 天"

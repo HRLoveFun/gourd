@@ -24,7 +24,7 @@
 `scripts/staleness.sh` 读这个块。`anchor_path` 相对**仓库根目录**；改动锚点即改动本技能的事实前提，属 L2。日期一律写 `YYYY-MM-DD`。
 
 ```yaml
-review_every_days: 90
+review_every_days: 5
 last_reviewed: 2026-10-27
 version: 0.1.0
 
