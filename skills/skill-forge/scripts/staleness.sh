@@ -29,11 +29,42 @@ done
 [ -z "$TARGETS" ] && TARGETS="__ALL__"
 
 # 仓库根：优先 git，其次脚本位置往上三级
-if ROOT=$(git rev-parse --show-toplevel 2>/dev/null); then
-  :
-else
-  ROOT=$(cd "$(dirname "$0")/../../.." 2>/dev/null && pwd) || ROOT=$(pwd)
+# ---- 定位仓库根 ----
+# 难点：脚本可能被符号链接到仓库外（如 ~/.agents/skills/），
+# 此时 dirname "$0" 得到的是链接所在目录，不是真实位置。
+# 做法：先穿透符号链接还原真实路径，再从该目录向上找仓库标志，
+# 找不到才退回 git / cwd。这样软链与直接调用行为一致。
+resolve_root() {
+  local src="$1" dir i=0
+  while [ -L "$src" ]; do
+    dir=$(cd -P "$(dirname "$src")" 2>/dev/null && pwd) || break
+    src=$(readlink "$src")
+    case "$src" in
+      /*) ;;
+      *) src="$dir/$src" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$src")" 2>/dev/null && pwd) || return 1
+  ROOT="$dir"
+  while [ "$i" -lt 6 ]; do
+    # 仓库标志：有 .git，或有 CATALOG.md 与 skills/
+    if [ -d "$ROOT/.git" ] || { [ -f "$ROOT/CATALOG.md" ] && [ -d "$ROOT/skills" ]; }; then
+      return 0
+    fi
+    ROOT=$(dirname "$ROOT")
+    i=$((i+1))
+  done
+  return 1
+}
+
+if ! resolve_root "$0"; then
+  if ROOT=$(git rev-parse --show-toplevel 2>/dev/null); then
+    :
+  else
+    ROOT=$(pwd)
+  fi
 fi
+
 
 SKILLS_DIR="$ROOT/skills"
 [ -d "$SKILLS_DIR" ] || { echo "找不到 skills/ 目录：$SKILLS_DIR" >&2; exit 64; }
@@ -120,7 +151,9 @@ check_skill() {
   get_vals "$block" anchor_cmd > "$list"
   while IFS= read -r c; do
     [ -z "${c}" ] && continue
-    if eval "${c}" >/dev/null 2>&1; then
+    # 锚点命令必须代表"仓库环境是否可用"，与调用方 cwd 无关。
+    # 否则从别处（或软链）调用时，git 类命令会因 cwd 不是仓库而假性 STALE。
+    if ( cd "${ROOT}" && eval "${c}" ) >/dev/null 2>&1; then
       echo "  OK     命令  ${c}"
     else
       echo "  STALE  命令  ${c} 执行失败（依赖缺失或参数已变）"

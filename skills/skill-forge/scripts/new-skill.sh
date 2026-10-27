@@ -23,10 +23,47 @@ case "$NAME" in
   -*|*-)        echo "目录名不能以连字符开头或结尾：$NAME" >&2; exit 64 ;;
 esac
 
-if ROOT=$(git rev-parse --show-toplevel 2>/dev/null); then
-  :
-else
-  ROOT=$(cd "$(dirname "$0")/../../.." 2>/dev/null && pwd) || { echo "找不到仓库根" >&2; exit 64; }
+# ---- 定位仓库根 ----
+# 难点：脚本可能被符号链接到仓库外（如 ~/.agents/skills/），
+# 此时 dirname "$0" 得到的是链接所在目录，不是真实位置。
+# 做法：先穿透符号链接还原真实路径，再从该目录向上找仓库标志，
+# 找不到才退回 git / cwd。这样软链与直接调用行为一致。
+resolve_root() {
+  local src="$1" dir i=0
+  while [ -L "$src" ]; do
+    dir=$(cd -P "$(dirname "$src")" 2>/dev/null && pwd) || break
+    src=$(readlink "$src")
+    case "$src" in
+      /*) ;;
+      *) src="$dir/$src" ;;
+    esac
+  done
+  dir=$(cd -P "$(dirname "$src")" 2>/dev/null && pwd) || return 1
+  ROOT="$dir"
+  while [ "$i" -lt 6 ]; do
+    # 仓库标志：有 .git，或有 CATALOG.md 与 skills/
+    if [ -d "$ROOT/.git" ] || { [ -f "$ROOT/CATALOG.md" ] && [ -d "$ROOT/skills" ]; }; then
+      return 0
+    fi
+    ROOT=$(dirname "$ROOT")
+    i=$((i+1))
+  done
+  return 1
+}
+
+if ! resolve_root "$0"; then
+  if ROOT=$(git rev-parse --show-toplevel 2>/dev/null); then
+    :
+  else
+    ROOT=$(pwd)
+  fi
+fi
+
+# 仍找不到仓库标志时，说明脚本被放到了无关目录，直接报错而不是猜
+if [ ! -d "$ROOT/skills" ]; then
+  echo "找不到仓库根（未发现 .git 或 CATALOG.md+skills/）：$ROOT" >&2
+  echo "请从 gourd 仓库内调用，或确认软链指向正确。" >&2
+  exit 64
 fi
 
 TEMPLATE="$ROOT/template"
