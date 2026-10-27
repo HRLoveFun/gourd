@@ -88,6 +88,18 @@ mkdir -p ~/.claude/skills && cp -r skills/log-cleanup ~/.claude/skills/
 | `staleness.sh --all --network` | **仅报告不拦路**，外网抖动不该变红灯 |
 | CATALOG 一致性 | 目录与索引表对不上 |
 
+### 复核提醒
+
+`review-reminder.yml` 每周一 09:00（UTC+8）检查各技能是否到期，**有到期项就开一个 Issue**，GitHub 会自动把 Issue 全文发成通知邮件。正文里带 description、接口摘要、逐条探针和期间改动，核完改 `last_reviewed` 后关闭 Issue 即可。
+
+不需要配置任何 SMTP 或凭据。手动预览：
+
+```bash
+./skills/skill-forge/scripts/review-packet.sh --force-due --dry-run
+```
+
+> GitHub 在仓库 60 天无提交后会自动停用定时任务，届时用 `workflow_dispatch` 手动跑一次。
+
 另外约定：改动 `description`（技能接口）时，commit 首行加 `L3:` 前缀并写清旧接口与新接口的差异。语义判断无法自动化，工具只查结构。
 
 本地等价命令：

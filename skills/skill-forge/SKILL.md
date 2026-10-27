@@ -29,7 +29,8 @@ skill-forge/
 └── scripts/
     ├── new-skill.sh          阶段八：脚手架
     ├── lint-skill.sh         闸门 C：仓库约定合规检查
-    └── staleness.sh          阶段九：锚点与时效体检
+    ├── staleness.sh          阶段九：锚点与时效体检
+    └── review-packet.sh      阶段九：生成复核包正文（供定时开 Issue）
 ```
 
 ## 输入
@@ -229,6 +230,19 @@ anchor_url: https://example.com/spec    # 依赖的规范（加 --network 才探
 ```
 
 **同类事件累计 3 次 → 触发 L3 重构**；单次事件导致错误产出 → 立即 L2。3 是经验值，可在本文件里调整，但**没有阈值就没有检测**。
+
+**第零层：主动推送（先于其余四层）。** TTL 只在"有人跑脚本时"才发现超期——仓库两周无人提交，它就会静默超期。所以到期内容必须被主动推送到人眼前：
+
+```bash
+./skills/skill-forge/scripts/review-packet.sh          # 0=有到期项并输出正文 / 1=今日无到期项
+./skills/skill-forge/scripts/review-packet.sh --force-due --dry-run   # 预览正文
+```
+
+`.github/workflows/review-reminder.yml` 每周一 09:00（UTC+8）跑它，有到期项就开 Issue，GitHub 自动把 **Issue 全文**发成通知邮件——因此不需要 SMTP、不需要任何凭据，而送达效果与自建邮件相同。
+
+推送的是**内容**而非时间：正文含 description 全文、接口摘要、逐条探针、上次复核后的改动。**关闭 Issue 即视为复核完成**（时间戳可审计）。已有未关闭 Issue 时只更新不新建，避免每周刷屏。
+
+> 为什么不用自建邮件：需要存邮箱应用密码（凭据是长期负债）、送达后仍要跳回仓库、且无法记录"核过"的痕迹。GitHub 的 Issue 通知覆盖同样效果，凭据为零。
 
 **第四层：TTL 兜底。** `review_every_days` 到期即报 STALE，无论前三层是否报警。前三种都可能漏，漏检代价随时间放大。
 

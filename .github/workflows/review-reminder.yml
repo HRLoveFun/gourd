@@ -1,0 +1,101 @@
+name: review-reminder
+
+# 目的：把"需要复核的内容"推送到人眼前，而不是只报"时间到了"。
+#
+# 为什么单独一个 workflow 而不是塞进 skills-ci：
+#   1. 定时任务的门槛应与提交检查分开——提交检查必须拦路，提醒只该通知
+#   2. 定时触发时语法/lint/一致性检查没有意义（代码没变），跑了全是噪声
+#   3. 出问题时定位范围小，不会牵连 PR 检查
+#
+# 送达方式：开 Issue → GitHub 自动发通知邮件，邮件正文即 Issue 全文。
+# 这一点很关键：不用配置 SMTP、不用存任何凭据，而送达效果与自建邮件一致。
+
+on:
+  schedule:
+    # 每周一 01:00 UTC = 09:00 (UTC+8)
+    # 周期 5 天，所以每周一跑一次保证"到期后不超过 2 天被发现"
+    - cron: '0 1 * * 1'
+  workflow_dispatch:      # 手动补跑：GitHub 会在仓库 60 天无提交后自动停用 schedule
+
+permissions:
+  contents: read
+  issues: write           # 仅用于开/查 Issue
+
+concurrency:
+  group: review-reminder
+  # 不取消进行中的运行，避免开了 Issue 却没走完后续步骤
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: 检出
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0    # review-packet 要读 git log 算"期间改动"
+
+      - name: 生成复核包
+        id: packet
+        run: |
+          set +e
+          ./skills/skill-forge/scripts/review-packet.sh > /tmp/packet.md 2>/tmp/packet.err
+          code=$?
+          set -e
+          echo "退出码 $code"
+          cat /tmp/packet.err || true
+          case "$code" in
+            0) echo "due=true"  >> "$GITHUB_OUTPUT" ;;
+            1) echo "due=false" >> "$GITHUB_OUTPUT"; echo "今日无到期项，不开 Issue" ;;
+            *) echo "::error::review-packet.sh 异常退出（$code）"; exit 1 ;;
+          esac
+          # 兜底：退出码说到期但正文为空，说明脚本坏了，不能静默放过
+          if [ "$code" = "0" ] && [ ! -s /tmp/packet.md ]; then
+            echo "::error::声明有到期项但正文为空"
+            exit 1
+          fi
+
+      - name: 查是否已有未关闭的复核 Issue
+        id: existing
+        if: steps.packet.outputs.due == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 不重复开 Issue：已有未关闭的就更新它，而不是每周刷一个新的
+          num=$(gh issue list --label review-reminder --state open \
+                  --json number --jq '.[0].number // empty')
+          echo "number=${num}" >> "$GITHUB_OUTPUT"
+          [ -n "$num" ] && echo "已有未关闭 Issue #$num，将更新而非新建"
+
+      - name: 建立或更新 Issue
+        if: steps.packet.outputs.due == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="复核到期：技能接口需要人工核对"
+
+          if [ -n "${{ steps.existing.outputs.number }}" ]; then
+            gh issue comment "${{ steps.existing.outputs.number }}" --body-file /tmp/packet.md
+            gh issue edit "${{ steps.existing.outputs.number }}" \
+              --title "$title" --body-file /tmp/packet.md
+            echo "已更新 Issue #${{ steps.existing.outputs.number }}"
+          else
+            # 先确保 label 存在（不存在时 gh issue create 会失败）
+            gh label create review-reminder --color FBCA04 \
+              --description "技能复核提醒" 2>/dev/null || true
+            url=$(gh issue create --title "$title" --body-file /tmp/packet.md \
+                    --label review-reminder)
+            echo "已新建 Issue: $url"
+          fi
+
+      - name: 汇总
+        if: always()
+        run: |
+          {
+            echo "### 复核提醒结果"
+            echo ""
+            echo "- 有到期项：\`${{ steps.packet.outputs.due }}\`"
+            echo "- 已有未关闭 Issue：\`${{ steps.existing.outputs.number }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
