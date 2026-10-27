@@ -52,6 +52,7 @@ skill-forge/
 ## 依赖
 
 - 运行时：bash（兼容 3.2，macOS 自带即可）；`git` 用于取仓库根
+- **可软链安装**：脚本会穿透符号链接定位仓库根，因此可 `ln -s <repo>/skills/skill-forge ~/.agents/skills/skill-forge`，之后从任意目录调用（`anchor_cmd` 也在仓库根下执行，不受 cwd 影响）
 - 第三方包：无。`lint-skill.sh` 只用 `grep` `awk` `sed` `find` `stat`
 - 外部服务或凭证：无。`staleness.sh --network` 可选联网探测 URL，默认不联网
 
