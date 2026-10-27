@@ -18,12 +18,14 @@ permissions:
 jobs:
   lint-and-staleness:
     name: 闸门 C + 时效体检
-    runs-on: ubuntu-latest
+    # 固定版本而非 ubuntu-latest：后者将于 2026-10 起迁移到 Ubuntu 26，
+    # 固定版本让环境变化成为显式决策，而不是某天突然红掉
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
 
     steps:
       - name: 检出
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 安装 shellcheck
         run: |
