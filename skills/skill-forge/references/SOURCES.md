@@ -19,14 +19,20 @@
 | --- | --- | --- |
 | （暂无） | - | 首次启用，尚无事件 |
 
+## 变更说明
+
+只记"为什么改"，不记"改了什么"（`git diff` 会说）。
+
+- 2026-10-28 L3：`description` 划出"效果评估 / 人物蒸馏"的边界，并新增阶段零入口分流；随后把描述与正文里的外部技能名全部换成能力描述，让本技能单读即自包含。起因是"评审我这个技能"同时命中多个技能，而正文只有"造新"一条路，加载后拿到的流程与接口承诺不符。同步补了异常表、三测四行记录、TTL 分档与脚本到期判定对齐。
+
 ## healthcheck
 
 `scripts/staleness.sh` 读这个块。`anchor_path` 相对**仓库根目录**；改动锚点即改动本技能的事实前提，属 L2。日期一律写 `YYYY-MM-DD`。
 
 ```yaml
 review_every_days: 5
-last_reviewed: 2026-10-27
-version: 0.1.0
+last_reviewed: 2026-10-28
+version: 2.0.0
 
 anchor_path: template/SKILL.md
 anchor_path: template/references/SOURCES.md
