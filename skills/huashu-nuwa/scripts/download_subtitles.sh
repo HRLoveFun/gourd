@@ -14,7 +14,17 @@ if [ -z "$URL" ]; then
     exit 1
 fi
 
+# 缺依赖时明确报错：否则所有 yt-dlp 调用被 2>/dev/null 吞掉，最终误报「未找到字幕」
+if ! command -v yt-dlp >/dev/null 2>&1; then
+    echo "❌ 未找到 yt-dlp，请先安装：pip install yt-dlp" >&2
+    exit 2
+fi
+
 mkdir -p "$OUTPUT_DIR"
+
+# 每次尝试前刷新时间戳，只认该次尝试新生成的字幕文件
+MARKER=$(mktemp "${TMPDIR:-/tmp}/ytdlp-marker.XXXXXX")
+trap 'rm -f "$MARKER"' EXIT
 
 echo ">>> 检查可用字幕..."
 yt-dlp --list-subs --no-download "$URL" 2>/dev/null | tail -20
@@ -23,8 +33,9 @@ echo ""
 echo ">>> 尝试下载人工字幕（中文优先）..."
 
 # 尝试1: 人工中文字幕
+touch "$MARKER"
 if yt-dlp --write-subs --sub-langs "zh-Hans,zh-Hant,zh,zh-CN,zh-TW" --sub-format srt --skip-download -o "$OUTPUT_DIR/%(title)s" "$URL" 2>/dev/null; then
-    FOUND=$(find "$OUTPUT_DIR" -name "*.srt" -newer /tmp/.ytdlp_marker 2>/dev/null | head -1)
+    FOUND=$(find "$OUTPUT_DIR" -name "*.srt" -newer "$MARKER" 2>/dev/null | head -1)
     if [ -n "$FOUND" ]; then
         echo "✅ 下载成功: $FOUND"
         exit 0
@@ -33,8 +44,9 @@ fi
 
 # 尝试2: 人工英文字幕
 echo ">>> 无中文人工字幕，尝试英文..."
+touch "$MARKER"
 if yt-dlp --write-subs --sub-langs "en,en-US,en-GB" --sub-format srt --skip-download -o "$OUTPUT_DIR/%(title)s" "$URL" 2>/dev/null; then
-    FOUND=$(find "$OUTPUT_DIR" -name "*.srt" -mmin -1 2>/dev/null | head -1)
+    FOUND=$(find "$OUTPUT_DIR" -name "*.srt" -newer "$MARKER" 2>/dev/null | head -1)
     if [ -n "$FOUND" ]; then
         echo "✅ 下载成功: $FOUND"
         exit 0
@@ -43,8 +55,9 @@ fi
 
 # 尝试3: 自动生成字幕（中文优先）
 echo ">>> 无人工字幕，尝试自动生成字幕..."
+touch "$MARKER"
 if yt-dlp --write-auto-subs --sub-langs "zh-Hans,zh,en" --sub-format srt --skip-download -o "$OUTPUT_DIR/%(title)s" "$URL" 2>/dev/null; then
-    FOUND=$(find "$OUTPUT_DIR" -name "*.srt" -o -name "*.vtt" 2>/dev/null | head -1)
+    FOUND=$(find "$OUTPUT_DIR" \( -name "*.srt" -o -name "*.vtt" \) -newer "$MARKER" 2>/dev/null | head -1)
     if [ -n "$FOUND" ]; then
         echo "✅ 自动字幕下载成功: $FOUND"
         exit 0

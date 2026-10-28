@@ -113,7 +113,7 @@ v2 9 维 rubric 强化 dim3/dim5 + 新增 dim9 是 SkillLens 验证过的方向�
 **huashu-gpt-image Round 2**：+0.15 marginal
 - Round 1: +10.7 分（基线 80.8 → 91.5）
 - Round 2: +0.15 分（91.5 → 91.65）
-- **触顶信号**：连续 2 轮 Δ < 2 → break，避免过度优化
+- **触顶信号**：paired 连续 2 轮判 slight/tie → break；绝对分 Δ<2 只作参考（口径见 SKILL.md HL-4）
 
 **对比 darwin-skill 早期**：40 次记录 0 revert，部分是因为没有触顶规则，硬凑 MAX_ROUNDS=3 都 keep 了边际改动。
 

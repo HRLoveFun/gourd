@@ -37,6 +37,8 @@
    - 上游 Phase 5 的八项只给了维度名、没给评分锚点，补了一档 1-10 含义（3/5/8/10 四个锚点），并指明与 darwin 的 dim2-dim9 同口径
    - Phase 0A 把「逐条确认」压成一句、并保留了两处原文关键句（本地素材怎么问、成本量级怎么说）；`.last-update-check` 缺失按「到期」处理，上游未定义此分支
 
+6. **独立冷启动与失败测试（2026-10-28）**：子 Agent 冷启动卡在 Phase 0.5——只要求建目录，没定义 SKILL.md 初始内容，骨架到 Phase 3 才出现。已补骨架占位写法与 slug 音译规则。另修六处矛盾：接口摘要「三处停」→ 四处；成本段「让用户选档」与「不必等档位确认」改为报量级给默认；Phase 0.5 完成检查兼容主题 Skill 的 `<topic>-framework`；0A「不必等确认」与 0.5「收到确认后执行」改为只等目标确认；输出表「三项测试」与 4.4「六项标准」写清两组；Phase 2「扫 01-05」补快速档只扫 01-03。失败测试确认缺 yt-dlp 时原脚本误报「未找到字幕」，且中文下载用不存在的 `/tmp/.ytdlp_marker` 判定，已改为 `command -v` 前置检查 + 每次尝试前刷新临时 marker。
+
 ## 与上游同步的步骤
 
 上游发新版时（`metadata.version` 或 `upstream_commit` 变化）：
@@ -55,7 +57,7 @@ diff -u /tmp/nuwa-upstream/SKILL.md skills/huashu-nuwa/references/research-swarm
 
 ```yaml
 version: 1.0.0
-last_reviewed: 2026-10-27
+last_reviewed: 2026-10-28
 review_every_days: 30
 anchor_path: skills/huashu-nuwa/references/research-swarm.md
 anchor_path: skills/huashu-nuwa/references/answer-protocol.md
@@ -79,3 +81,13 @@ probe: 上游仍要求「所有调研文件必须存在 skill 目录内部」，
 
 | 日期 | 类型 | 现象 |
 | --- | --- | --- |
+| 2026-10-28 | 卡壳 | 独立冷启动（子 Agent）：Phase 0.5 未定义 SKILL.md 初始内容，骨架到 Phase 3 才出现；已补占位写法 |
+
+## 三测记录（2026-10-28）
+
+```text
+触发测试：命中 5/5 句；无关句 0/3 误命中（32 句由独立子 Agent 按四份 description 路由）
+冷启动：子 Agent 独立执行，修复两轮后卡点 0；修复项见「移植范围与改动」第 6 条
+失败测试：无参数 → 用法并退出 1；文件/目录不存在 → 明确报错；缺 yt-dlp → 提示安装并退出 2；垃圾字幕 → 容错输出不丢内容；中文成功路径用 stub yt-dlp 验证，真实 YouTube 下载未验证
+结论：可用
+```

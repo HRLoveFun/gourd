@@ -72,8 +72,8 @@
 ## 红灯扫描快速命令
 
 ```bash
-# 在 skill 目录跑这个 grep，输出即红灯命中
+# 在 skill 目录跑这个 grep；输出只是候选，逐行读上下文排除假阳性
 grep -nE "(在 Claude Code|Claude Code skill|Claude Code 用户|Cursor only|Codex 中|^\[!\[Claude Code|~/\.claude/skills/[a-z]|/plugin install\b)" SKILL.md README.md 2>/dev/null
 ```
 
-输出非空 = 该 skill 未通过 gate，必须在优化循环里修复。
+输出非空 ≠ 未通过 gate：先排除 grep 本身、反例引用、讲解该规则的元陈述，再按 SKILL.md「Runtime 适配性审查」确认是否真红灯。SKILL.md 与本节冲突时以 SKILL.md 为准。

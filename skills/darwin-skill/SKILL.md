@@ -63,7 +63,7 @@ darwin-skill/
 | 9 维评分卡 | 会话内输出 | 基线一张、每个 skill 收尾一张 |
 | 改进提交 | `auto-optimize/YYYYMMDD-HHMM` 分支 | 只给 keep 的轮次提交（每轮一个）；worse 不提交，由 `results.tsv` 留痕 |
 | 优化日志 | 本目录 `results.tsv` | 9 列，含 `eval_mode`，可直接当审计记录 |
-| 成果卡片 | 用户指定的 PNG 路径 | 3 种风格随机，需要 node + playwright |
+| 成果卡片 | 用户指定的 PNG 路径 | 三份模板择一（默认主模板），需要 node + playwright |
 
 写入范围只有四处：被优化 skill 目录（SKILL.md 与 test-prompts.json）、本目录的 `results.tsv` 与 `.last-update-check`、用户指定的卡片 PNG、优化分支上的提交。除此之外不动任何文件，尤其不覆盖用户未提交的改动。
 
@@ -71,7 +71,7 @@ darwin-skill/
 
 - 运行时：git（棘轮机制的前提）、bash 3.2+、支持 subagent 的 Agent runtime（独立 judge 与 with/baseline 对比都要用）
 - 第三方包：出卡片时需 node 18+ 与 `playwright` 或 `playwright-core`（`npm i -g playwright-core && npx playwright install chromium`）；不出卡片则无依赖
-- 外部服务或凭证：无，不联网、不需要 API key
+- 外部服务或凭证：无，不需要 API key；除版本自检的 `git ls-remote` 外不联网
 
 ## 使用方法
 
@@ -81,9 +81,9 @@ darwin-skill/
 
 | 用户说法 | 执行范围 |
 | --- | --- |
-| 「优化所有 skills」 | Phase 0-3 全流程，默认先基线评估，按分数升序只优化最低 5-10 个 |
+| 「优化所有 skills」 | Phase 0-3 全流程，默认先基线评估，按分数升序优化最低 5 个（用户指定才扩到 10 个） |
 | 「优化 huashu-slides 这个 skill」 | 单个 skill：Phase 0 仍要建分支与 `results.tsv` → 0.5-2 → Phase 3 只出单 skill 卡片，不按分数挑多个 |
-| 「评估所有 skills 的质量」 | 只走 Phase 0.5-1，出评分卡，不进入优化循环 |
+| 「评估所有 skills 的质量」 | Phase 0 只建分支与 `results.tsv`（不做优化）→ 0.5-1，出评分卡，不进入优化循环 |
 | 「看看 skill 优化历史」 | 读并展示 `results.tsv` |
 
 ### 评估 Rubric（9 维度，总分 100）
@@ -128,7 +128,7 @@ skill 应当能在 Claude Code / Codex / Cursor / OpenClaw / Hermes / Gemini CLI
 grep -nE "(在 Claude Code|Claude Code skill|Claude Code 用户|Cursor only|Codex 中|^\[!\[Claude Code|~/\.claude/skills/[a-z]|/plugin install\b)" SKILL.md README.md 2>/dev/null
 ```
 
-输出非空 ≠ 红灯：先读命中行上下文排除假阳性（grep 本身、反例引用、讲解该规则的元陈述），记 `runtime_scan=false_positive`；确认是真红灯（指令性用法）就把 Phase 2 第一轮定为 P0「runtime drift 修复」，`results.tsv` 的 note 记 `runtime_warn=N`。frontmatter 触发词、生态内 skill 名引用、明确标注 runtime-specific 的章节、commit message 属正当出现，不算红灯。→ 完整对照表见 [references/runtime-neutrality.md](references/runtime-neutrality.md)。该文件把它简写成「grep 有输出 = gate 未通过」，与本节冲突时**以本节为准**（必须先排除假阳性）；这处不一致是上游两处文档自带的，已记进 SOURCES。
+输出非空 ≠ 红灯：先读命中行上下文排除假阳性（grep 本身、反例引用、讲解该规则的元陈述），记 `runtime_scan=false_positive`；确认是真红灯（指令性用法）就把 Phase 2 第一轮定为 P0「runtime drift 修复」，`results.tsv` 的 note 记 `runtime_warn=N`。frontmatter 触发词、生态内 skill 名引用、明确标注 runtime-specific 的章节、commit message 属正当出现，不算红灯。→ 完整对照表见 [references/runtime-neutrality.md](references/runtime-neutrality.md)。该文件的扫描命令同样只给候选，必须先排除假阳性；两处表述不一致时**以本节为准**（上游自带的分歧，已记进 SOURCES）。
 
 ### Phase 0: 初始化
 
@@ -244,7 +244,7 @@ timestamp	commit	skill	old_score	new_score	status	dimension	note	eval_mode
 | 1 | 同 context 自评自改 | 必须 spawn 独立子 agent；keep/revert 走 paired 奇数 N 多数决 |
 | 1b | 拿绝对分数 delta 当棘轮 | 绝对分只做 triage；paired 的 within-judge 抵销消除换尺污染 |
 | 2 | 用 `git reset --hard` 回滚 | 未提交的改动用 `git checkout -- <path>` 丢弃；已提交的坏改动用 `git revert <sha>`。`reset --hard` 会连别人的未提交改动一起抹掉 |
-| 3 | 为凑分增冗余 | 触顶信号（连续 2 轮 Δ<2）即 break，见好就收 |
+| 3 | 为凑分增冗余 | 触顶信号（paired 连续 2 轮判 slight/tie）即 break；绝对分 Δ<2 只作参考，不作判据 |
 | 4 | 跳过 test-prompts 直接评分 | Phase 0.5 强制设计 2-3 条；用户不给就默认编 3 条并展示确认 |
 | 5 | 轮内改多个维度 | 每轮 1 个维度，否则分数升降无法归因 |
 | 6 | dry_run 比例 >30% | 强制至少 1 次真实 full_test，dry_run 多的行显式打 ⚠️ |
@@ -270,6 +270,6 @@ timestamp	commit	skill	old_score	new_score	status	dimension	note	eval_mode
 - 上游：[alchaincyf/darwin-skill](https://github.com/alchaincyf/darwin-skill)，作者花叔（[@AlchainHust](https://x.com/AlchainHust)），MIT，快照 commit `8a8b662`（2026-09-18），移植于 2026-10-27
 - 学术依据：SkillLens（arXiv 2605.23899，9 维 rubric 的实证来源）、SkillOpt（arXiv 2605.23904，validation-gated 机制）、Karpathy 的 autoresearch（1.0 的灵感）
 - 本目录的改动：按本仓库九节重排；策略库与成果卡片两节原文外置到 `references/`；`templates/` 收进 `assets/templates/` 以符合「一技能一目录」；未收录上游 `showcase.html`、`docs/`、宣传图与大图（链接见 [references/SOURCES.md](references/SOURCES.md)）
-- 上游原文与本文冲突时以上游为准，并按下文同步
+- 除 [references/SOURCES.md](references/SOURCES.md) 记录的刻意偏离（如先判后提交）外，上游原文与本文冲突时以上游为准，并按下文同步
 - 参考资料按 MLA 记在 [references/SOURCES.md](references/SOURCES.md)，那里同时有 healthcheck 块与与上游同步的步骤
 - 许可证：MIT（与仓库一致），上游许可证原文见 [LICENSE.upstream](LICENSE.upstream)

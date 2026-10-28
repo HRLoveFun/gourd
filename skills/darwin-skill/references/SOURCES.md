@@ -30,7 +30,7 @@
 
 1. **结构重排**：上游是「Rubric → 自主优化循环 → 报告 → 策略库 → 边界 → 黑名单 → 约束 → 使用方式」的散文顺序，改为「用途 → 文件结构 → 输入 → 输出 → 依赖 → 使用方法 → 注意事项」。9 维权重、`MAX_ROUNDS=3`、`dry_run >30%`、`150%` 体积上限这些阈值一个没动。
 2. **细节外置**：优化策略库（30 行）与成果卡片生成（54 行）两节原文移入 `references/`，正文保留入口与一行指路。
-3. **目录归位**：上游把卡片模板放在顶层 `templates/`，本仓库只认 `assets/`，故移到 `assets/templates/`；`screenshot.mjs` 的默认路径用的是 `../templates/…`，调用时必须显式传两个参数（正文已写明），不要依赖默认值。`result-card.md` 里的 `templates/`、`.claude/skills/darwin-skill/` 两处旧路径已同步改成 `assets/templates/` 与 `skills/darwin-skill/`，其余文字未动。
+3. **目录归位**：上游把卡片模板放在顶层 `templates/`，本仓库只认 `assets/`，故移到 `assets/templates/`；`screenshot.mjs` 的默认路径原本还指向移植前的 `../templates/…`，失败测试确认无参数时读不到文件，已改为 `../assets/templates/…`，显式传参与默认值都可用。`result-card.md` 里的 `templates/`、`.claude/skills/darwin-skill/` 两处旧路径已同步改成 `assets/templates/` 与 `skills/darwin-skill/`。
 4. **版本自检改写**：上游假设本目录是上游仓库的 git 克隆；本目录在 gourd 仓库内，`git -C` 指向 gourd 的 origin。正文改为比对 `git ls-remote` 的上游 HEAD，并保留 `metadata.upstream_commit` 作为本目录的快照坐标。
 5. **description 改写**：上游是英文长句 + 关键词串，本仓库要求「做什么 + 何时用 + 边界」的中文句式且必须写「不适用于」；触发词（优化 skill / 打分 / 达尔文 / skill review）全部保留。
 
@@ -42,7 +42,9 @@
 
 7. **description 与版本自检的本地化**：description 按本仓库句式重写（上游是英文长句 + 关键词串，且不含「不适用于」边界）；版本自检改为比对 `metadata.upstream_commit`，因为本目录在 gourd 仓库内，`git -C` 命中的是 gourd 的 origin，按上游写法会每次误报有新版本。
 
-8. **上游文档与自带模板不符**（实测）：`result-card.md` 里的 `dim-bar-before/after`、`improvement-1/2/3`、以及「改 URL hash 切 swiss/terminal/newspaper」在模板里都不存在——模板字段是 `improve-1/2/3`，另有 `top1-*` / `top2-*`，且三份模板是彼此独立的文件、不靠 hash 切换。正文改成「先从模板 grep 出 `data-field` 再填」，切片顶部加了实测警告，上游原文保留。
+8. **上游文档与自带模板不符**（实测）：`result-card.md` 里的 `dim-bar-before/after`、`improvement-1/2/3`、以及「改 URL hash 切 swiss/terminal/newspaper」在模板里都不存在——模板字段是 `improve-1/2/3`，另有 `top1-*` / `top2-*`，且三份模板是彼此独立的文件、不靠 hash 切换。切片已按模板改写，不再保留错误原文。
+
+9. **独立冷启动与失败测试（2026-10-28）**：子 Agent 冷启动通过，报告一处模糊（「只优化最低 5-10 个」没给判据）与三处矛盾。已修：入口补默认值 5 个；黑名单 #3 的 break 判据改为与 HL-4 一致的 paired 连续 2 轮 slight/tie，绝对分 Δ<2 只作参考；`result-card.md` 的风格表、字段名、回退命令按模板实测改写；`runtime-neutrality.md` 的「grep 输出即红灯」改为先排假阳性。复测又修四处：SKILL.md 对 runtime 文件的引用句、`assets/test-prompts.json` 的触顶口径、`skilllens-evidence.md` 的触顶信号、输出表「3 种风格随机」改为三份模板择一。失败测试另修 `screenshot.mjs` 默认路径（无参数时读不到模板）。
 
 ## 与上游同步的步骤
 
@@ -59,7 +61,7 @@ diff -u /tmp/darwin-upstream/templates/result-card.html skills/darwin-skill/asse
 
 ```yaml
 version: 2.1.0
-last_reviewed: 2026-10-27
+last_reviewed: 2026-10-28
 review_every_days: 30
 anchor_path: skills/darwin-skill/references/strategy-library.md
 anchor_path: skills/darwin-skill/assets/templates/result-card.html
@@ -82,3 +84,13 @@ probe: 上游仍把「只认 Claude Code 路径」列为 runtime gate 失败项
 
 | 日期 | 类型 | 现象 |
 | --- | --- | --- |
+| 2026-10-28 | 卡壳 | 独立冷启动（子 Agent）：入口「最低 5-10 个」无选取判据；已补默认 5 个、上限 10 个 |
+
+## 三测记录（2026-10-28）
+
+```text
+触发测试：命中 5/5 句；无关句 0/3 误命中（32 句由独立子 Agent 按四份 description 路由）
+冷启动：子 Agent 独立执行，修复两轮后卡点 0；修复项见「移植范围与改动」第 9 条
+失败测试：缺 playwright → 明确提示安装并退出 1；无参数默认路径已指向存在的模板；results.tsv 缺失/损坏按异常表重建（文档路径，未自动验证）
+结论：可用
+```

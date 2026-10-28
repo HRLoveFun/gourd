@@ -41,8 +41,8 @@ function loadPlaywright() {
 }
 const pw = loadPlaywright();
 
-const htmlPath = process.argv[2] || new URL('../templates/result-card.html', import.meta.url).pathname;
-const outputPath = process.argv[3] || new URL('../templates/result-card.png', import.meta.url).pathname;
+const htmlPath = process.argv[2] || new URL('../assets/templates/result-card.html', import.meta.url).pathname;
+const outputPath = process.argv[3] || new URL('../assets/templates/result-card.png', import.meta.url).pathname;
 
 async function screenshot() {
   const browser = await pw.chromium.launch();
