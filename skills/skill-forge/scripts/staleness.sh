@@ -76,9 +76,11 @@ NOW=$(date +%s)
 # 跨平台转 epoch：先试 BSD，再试 GNU
 to_epoch() {
   local d="$1" e=""
-  e=$(date -j -f "%Y-%m-%d" "$d" +%s 2>/dev/null) || true
+  # 必须显式补 00:00:00：BSD date 的 -f "%Y-%m-%d" 会用「当前时分秒」补足，
+  # 于是 (now - re) 比整日差几秒，整除后天数少 1，TTL 会晚一天触发。
+  e=$(date -j -f "%Y-%m-%d %H:%M:%S" "$d 00:00:00" +%s 2>/dev/null) || true
   if [ -z "$e" ]; then
-    e=$(date -d "$d" +%s 2>/dev/null) || true
+    e=$(date -d "$d 00:00:00" +%s 2>/dev/null) || true
   fi
   printf '%s' "$e"
 }
@@ -193,7 +195,9 @@ check_skill() {
       # 硬编码 14 天在周期 <= 14 天时会永久告警，把 CI 拖成常态红灯。
       lead=$(( every * 15 / 100 ))
       [ "$lead" -lt 1 ] && lead=1
-      if [ "$te" -gt "$every" ]; then
+      # 与 review-packet.sh 同口径：满周期即到期。原先用 -gt，
+      # 会出现"第 5 天推送了、体检却说还没超期"的分叉。
+      if [ "$te" -ge "$every" ]; then
         echo "  STALE TTL   已 $te 天未复核（阈值 ${every}，超期 $((te-every)) 天）"
         fail=$((fail+1))
       elif [ "$days" -le "$lead" ]; then

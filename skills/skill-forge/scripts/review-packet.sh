@@ -8,8 +8,8 @@
 #   ... --dry-run        # 标注为预览
 #
 # 退出码：0 = 有到期项且已输出正文 / 1 = 今日无到期项 / 64 = 用法错误
-# 调用方按退出码判断是否开 Issue，不要靠输出是否为空来判断
-# （空正文 = 不需要开 Issue，调用方据此判断）。
+# 调用方一律按退出码判断是否开 Issue，不要判断输出是否为空：
+# 0 却输出空正文属于异常，应当报错，而不是静默跳过。
 #
 # 设计要点：
 #   - 只推"内容"，不推"时间到了"。正文含 description、接口摘要、探针清单、期间改动
@@ -76,8 +76,10 @@ TOTAL_EPOCH=$(date +%s)
 
 to_epoch() {
   local d="$1" e=""
-  e=$(date -j -f "%Y-%m-%d" "$d" +%s 2>/dev/null) || true
-  [ -z "$e" ] && e=$(date -d "$d" +%s 2>/dev/null) || true
+  # 与 staleness.sh 同一处理：显式补 00:00:00，否则 BSD date 用当前时分秒补足，
+  # 两个脚本对同一份 SOURCES 会算出相差 1 天的结论。
+  e=$(date -j -f "%Y-%m-%d %H:%M:%S" "$d 00:00:00" +%s 2>/dev/null) || true
+  [ -z "$e" ] && e=$(date -d "$d 00:00:00" +%s 2>/dev/null) || true
   printf '%s' "$e"
 }
 
@@ -162,6 +164,11 @@ for n in $DUE; do
   else
     echo "**探针缺失**：该技能未声明 \`probe:\`，判断层面的过时无人负责。"
   fi
+  echo ""
+
+  # 使用事件：与 staleness.sh 的阈值口径一致（同类 3 条 → L3）
+  ev_cnt=$(awk '/^## 使用事件/{f=1;next} f&&/^## /{f=0} f&&/^\| 20/{print}' "$src" | wc -l | tr -d ' ')
+  echo "**使用事件**：${ev_cnt:-0} 条（同类累计 3 条即触发 L3 重构）"
   echo ""
 
   # 期间改动：这是判断"要不要顺便复核"的关键信息
