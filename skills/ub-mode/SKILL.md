@@ -5,7 +5,7 @@ metadata:
   author: "Robert C. Martin (Uncle Bob)"
   homepage: "https://github.com/unclebob"
   repository: "https://github.com/unclebob/ub-mode"
-  version: "0.1.0"
+  version: "0.1.1"
   imported: "2026-10-30"
   upstream_commit: "57a8bdd28e45ed41900ace0bafa2ff76dd9ed70f"
 ---
@@ -56,11 +56,15 @@ ub-mode/
 
 ## 依赖
 
-- 运行时：无特殊要求（纯文档技能）；「提交与推送」一条用到 `git`
-- 第三方包：无
-- 可选门禁工具（均为 Uncle Bob 维护，BSD Zero Clause License）：[crapper](https://github.com/unclebob/crapper)、[dryer](https://github.com/unclebob/dryer)、[mutator](https://github.com/unclebob/mutator)、[uml-viewer](https://github.com/unclebob/uml-viewer)。每个仓库根下有可执行入口（`./crapper`、`./dryer`、`./mutator`），首次运行会在**工具检出目录**里自建 `.venv`（不在项目里）。建议三个工具检出到项目外的同一个父目录（如 `/tmp/ub-tools/{crapper,dryer,mutator}`）——`mutator` 要求的 `../crapper` 就是这个父目录下的 crapper。入口都接受 `--root <目录>` 指定项目根，不传则用当前工作目录；**在工具目录里跑裸命令会分析工具自己**，务必带 `--root` 或先 `cd` 到项目根
+- 运行时：`git`（仅「提交与推送」一条用到）；门禁工具需要 **Python ≥ 3.11**——crapper／dryer／mutator 都是纯 Python 包，不需要 JVM、Go 或 Rust
+- 第三方包：无（门禁工具的依赖由各自 launcher 建 `.venv` 时自行安装）
+- 可选门禁工具（均为 Uncle Bob 维护，BSD Zero Clause License）：[crapper](https://github.com/unclebob/crapper)、[dryer](https://github.com/unclebob/dryer)、[mutator](https://github.com/unclebob/mutator)、[uml-viewer](https://github.com/unclebob/uml-viewer)。每个仓库根下有可执行入口（`./crapper`、`./dryer`、`./mutator`），首次运行会在**工具检出目录**里自建 `.venv`（不在项目里）
+- **检出布局用持久路径**：`~/Tools/ub-tools/{crapper,dryer,mutator}`——`mutator` 要求的 `../crapper` 就是这个父目录下的 crapper。**别用 `/tmp`**：系统清理后工具与 `.venv` 一起消失。**移动目录后必须删掉 `.venv` 让 launcher 重建**（editable 安装与 `bin/*` 里是绝对路径，搬走即失效）
+- **两个参数分工不同**：`--root <目录>` 决定**产物写在哪里**（不传用当前工作目录；在工具目录里跑裸命令会分析工具自己）；`-s/--source-root <目录>`（可重复）决定**分析哪些树**。三个入口都支持
+- **三个工具都不读 `.gitignore`**：只按固定名单跳过目录（`.git`、`.venv`、`venv`、`target`、`test`、`tests`、`build`、`dist`、`node_modules`、`vendor`…）。复制出来的工作树（如 `.claude/worktrees/`）和样例目录会被当成源码重复计入：实测同一仓库全树 3325 对重复，用 `-s src -s scripts` 限定后是 12 对。分析真实仓库前先定好范围
+- **产物落在被分析项目根，不在工具目录**：`.metrics/{crap.edn,dry.edn,mutate/<namespace>.edn}` 与 `target/coverage/**`；mutator 另有 `target/mutation-workers/`（每个文件跑完即清空）。**跑之前先确认该项目的 `.gitignore` 覆盖 `.metrics/` 与 `target/`**，否则 `git status` 立刻变脏；两者都是门禁自身产物，需要时可以直接删
+- **Python 覆盖率的解释器怎么选**：`<项目>/.venv/bin/python` → `<项目>/venv/bin/python` → PATH 上的 `python3`，取第一个存在的；缺 `coverage`／`pytest` 时会把它们 `pip install` 进**那个解释器**（不改项目依赖文件）。项目没有 venv 时等于往全局 `python3` 里装，介意就先自建 venv 并装好测试依赖
 - 外部服务或凭证：无
-- **未验证**：上述四个工具本次只读了 README，未在本机安装、未跑通；语言支持、覆盖率采集方式与确切参数以各自 README 为准
 
 ## 使用方法
 
@@ -145,14 +149,14 @@ CRAP 的算法来自 crapper 的 README：`CRAP = CC² × (1 − coverage)³ + C
 - **提交需授权。** 上游要求「最后推到主线」；在本仓与多数用户环境里，commit / push 必须先获明示，未获授权时只输出建议的提交切分。
 - **不做范围外的清理。** 「先减后加」的删除只限本次改动的范围；worktree 清理只在用户要求时做。顺手删别人的东西，比留着重复代码更贵。
 - **不适用于**：只做咨询或评审不改代码、性能调优、技术选型，以及用户明确只要一次性原型、不要纪律约束的场景。这类请求直接做，不要套三段式给自己加戏。
-- **未验证范围**：本次只做了结构移植与文档核对，没有在真实项目里跑过一次完整三段，也没有实际运行 crapper／dryer／mutator。
+- **已验证与未验证**：2026-10-30 在 macOS + Python 3.13.9 上实跑（crapper `6fd92c4`、dryer `66ff6d2`、mutator `a5a0cb8`，检出在 `~/Tools/ub-tools`）——Python 通道三段全通：crapper 自动完成 `coverage run -m pytest` → `coverage lcov` → `.metrics/crap.edn`；dryer 报出 `score=1.00` 的重复对；mutator 三种收尾状态都复现（站点全杀 → exit 0；拿掉边界测试后 10 个存活 → exit 3；基线失败 → exit 2），并在一个 649 个函数的真实 Python 仓库上跑过 crapper 与 dryer。**仍未验证**：Clojure / Java / Go / TypeScript / Rust 五条通道（本机没有对应工具链）；`coverage = 0 → CRAP = CC² + CC` 的降级只是 README 推断；`uml-viewer` 未安装
 
 ## 来源与许可证
 
 - 参考过的资料：按 MLA 记在 [references/SOURCES.md](references/SOURCES.md)，这里不重复
 - 上游：<https://github.com/unclebob/ub-mode>，作者 Robert C. Martin（Uncle Bob）；快照 commit `57a8bdd28e45ed41900ace0bafa2ff76dd9ed70f`（提交日期 2026-10-25）；移植日期 2026-10-30
 - 上游许可证：**仓库内没有 `LICENSE` 文件**，按默认版权规则即保留所有权利。故本目录**不收录上游原文**，只做方法论的中文重写（按本仓 `README.md`「方式二」：无许可证的上游只读不抄，用自己的话重写判据与流程）
-- 本目录的改动：重排为九节骨架；每条补「落地动作」与「判定」；补判定线来源与三种收尾状态、门禁缺失的降级路径、`--root` 调用形态、规则 5 的兜底；提交改为需授权。逐条理由见 [references/SOURCES.md](references/SOURCES.md) 的「移植范围与改动」
+- 本目录的改动：重排为九节骨架；每条补「落地动作」与「判定」；补判定线来源与三种收尾状态、门禁缺失的降级路径、`--root` 调用形态、规则 5 的兜底；提交改为需授权；补真机运行得到的操作约束（持久检出路径、不读 `.gitignore`、产物落在被分析项目根、解释器回退到 `python3`）。逐条理由见 [references/SOURCES.md](references/SOURCES.md) 的「移植范围与改动」
 - 与上游冲突时：以上游 `SKILL.md` 为准；例外是本目录刻意改动的第 3–9 条（降级路径、判定线来源、提交授权、规则 5 解释、顺序仲裁、无覆盖率死路、量化线），保持本目录写法并在 `SOURCES.md` 说明理由
 - 合规提示：条目与上游一一对应，若作者主张这构成改编而非「想法与事实」的重写，需先取得授权再分发；本目录仅收录中文转述，未收录原文
 - 配套工具 crapper／dryer／mutator 为 BSD Zero Clause License（0BSD），`uml-viewer` 仓库内未见 `LICENSE` 文件
