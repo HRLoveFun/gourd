@@ -69,6 +69,11 @@ jobs:
           done < <(find . -type f -name '*.sh' -not -path './.git/*')
           exit "$miss"
 
+      # 技能脚本的行为回归。doc-check.sh 要拷进各项目，在 Linux 上跑不通的问题
+      # 只有这一步能发现（macOS 与 Linux 的 mktemp、awk 行为都不同）
+      - name: doc-check 回归测试
+        run: ./skills/doc-architecture/scripts/doc-check.test.sh
+
       - name: 闸门 C — 仓库约定合规
         run: ./skills/skill-forge/scripts/lint-skill.sh --all
 

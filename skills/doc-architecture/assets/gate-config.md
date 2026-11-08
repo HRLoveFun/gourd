@@ -15,7 +15,7 @@ set -u
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 bash "$root/scripts/doc-check.sh" --root "$root" || {
   echo "" >&2
-  echo "文档地图与文件对不上：先改 AGENTS.md 的地图，再动文件，最后重跑。" >&2
+  echo "文档地图与文件对不上：先改 DOC_MAP.md，再动文件，最后重跑。" >&2
   exit 1
 }
 EOF
@@ -54,7 +54,7 @@ jobs:
 
 ## 四、什么时候加 `--strict`
 
-默认只让 FAIL 拦路，WARN 只打印。刚落地时 WARN 会成片出现（缺元信息头、有死链），此时开 `--strict` 会让所有人第一周就学会 `--no-verify`，门禁等于没有。
+默认只让 FAIL 拦路，WARN 只打印。刚落地时 WARN 会成片出现（缺元信息头、有死链、词表频率未调好），此时开 `--strict` 会让所有人第一周就学会 `--no-verify`，门禁等于没有。
 
 建议：先默认跑两周，WARN 清零后把 CI 那行改成 `bash scripts/doc-check.sh --strict`，把 WARN 也拦成红灯。
 
