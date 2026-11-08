@@ -30,9 +30,17 @@
 
   > 支撑 C 轴「验证本身要被验证」：以自动化测试衡量模型，测试是否代表关心的行为仍需判断。Qtd. in 原帖。
 
+- "OpenAI Says Benchmark Used to Measure AI Coding Skill Is 'Contaminated'—Here's Why." *Decrypt*, 24 Feb. 2026, decrypt.co/359012/openai-benchmark-measure-ai-coding-supremacy-contaminated.
+
+  > 2026-11-08 复核补入，转述 OpenAI 2026 年 2 月停用 SWE-bench Verified 的文章（原文对非浏览器访问返回 403，未读到原文）。OpenAI 审计了 GPT-5.2 稳定失败的 138 道题，判定 59.4% 是坏题，并认为题集已被训练数据污染，改推 Scale AI 的 SWE-bench Pro。Verified 本是 93 名工程师人工筛过的子集，仍留下大量坏测试，这让它更像「验证本身要被验证」的例证。
+
 - METR. "Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity." *METR*, July 2025, metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/.
 
   > 支撑注意事项「不要用生成快论证交付快」：局部生成提速与整体交付效率之间无简单换算。Qtd. in 原帖。
+
+- METR. "We are Changing our Developer Productivity Experiment Design." *METR*, 24 Feb. 2026, metr.org/blog/2026-02-24-uplift-update/.
+
+  > 2026-11-08 复核补入。后续实验（57 名开发者、800 余项任务）的估计转为提速（-18% 和 -4%，置信区间都含 0）；METR 自认受选择偏差影响，是不可靠的信号，同时认为开发者现在很可能已被提速。所以 2025 年的 19% 只能当作当时的估计，不能当现状引用。它对「不要用生成快论证交付快」的支撑仍在：自评与实测对不上，实测本身也难测准。
 
 - DORA. *Accelerate State of DevOps Report 2025*. Google Cloud, 2025.
 
@@ -77,6 +85,8 @@
 刻意没取：评分卡与 A/B/C/D 等级（与「不评分」冲突）、四个停点（一次诊断最多一个）、四轴分给四个 agent（四值必须单点收口）、成本档位、把方法论长文外置到 `references/`（本仓库约定只放 SOURCES.md）。
 
 已知悬空：降级表五行都是按输入表推的路径，**无真实审计记录支撑**；「整仓无基线」那条来自冷启动实测，留在「输入」节，不在表内。出现真实案例后按「使用事件」补注。
+
+**0.8.1 复核（2026-11-08，L1）**：两条外部探针的前提变了。METR 2026 年 2 月的后续实验转向“可能提速”，但 METR 自认信号不可靠，19% 不能再当现状引用；OpenAI 同月停用 SWE-bench Verified，坏题与污染让它更像「验证本身要被验证」的例证。正文判断不依赖这两个数字，只补引用注记、改写两条探针。其余七条探针要靠真实使用回答，上次复核以来没有使用事件，维持原判。小红书锚点脚本报 404 是备注里写明的误报，本次按旧备注用浏览器 UA 复测得 302；该做法属于绕过站点访问限制，备注已改为人工打开确认。
 
 ## 使用事件
 
@@ -123,7 +133,7 @@
 
 ```yaml
 review_every_days: 5
-last_reviewed: 2026-10-28
+last_reviewed: 2026-11-08
 version: 0.8.1
 
 # 本技能唯一的一手材料；链接失效即判据失去出处
@@ -134,8 +144,8 @@ anchor_cmd: bash --version
 anchor_cmd: git --version
 
 # 每条一个能被"是/否"回答的前提核对题；任一为否即前提已变
-probe: 轴 C 引用的 METR 2025 结论（经验丰富开发者平均耗时增加约 19%）是否仍成立，是否已被后续随机对照实验推翻
-probe: SWE-bench Verified 是否仍是「验证本身也要被验证」的有效例证；是否已出现更贴近真实改动的评测
+probe: METR 改版后的研究是否给出可靠的提速或降速估计；若给出，「不要用生成快论证交付快」的引证要换成新结论
+probe: SWE-bench Pro 等替代评测是否也被发现坏题或污染；若是，「验证本身要被验证」的例证要跟着更新
 probe: C 轴四层（实现/架构/交互/目标）是否仍覆盖实际发现——出现过无法归层的症状吗
 probe: 四轴是否仍覆盖不了实际收到的审查请求；出现稳定的第 5 类即该重构
 probe: 「不评分、不改代码」是否仍被用户接受；若多数人要求直接改代码，说明接口前提变了
@@ -144,6 +154,6 @@ probe: 独立复核是否真的发生过——出现过「反对 → 降待查�
 probe: `probe.sh` 的输出是否被误当结论直接写进发现；出现过「只跑了脚本就下判断」吗
 probe: 降级表五行是否出现真实案例；出现后是否已把「推的」改成「见过的」
 
-# 注：xhslink.cn 对非浏览器 UA 返回 404，staleness.sh --network 会误报 STALE；
-# 核对时用 curl -A "Mozilla/5.0" 复测，或直接人工打开确认。
+# 注：xhslink.cn 对非浏览器访问返回 404，staleness.sh --network 会误报 STALE；
+# 核对时用浏览器人工打开确认，不要伪装 UA 绕过站点的访问限制。
 ```
