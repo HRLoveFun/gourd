@@ -23,6 +23,7 @@
 
 只记"为什么改"，不记"改了什么"（`git diff` 会说）。
 
+- 2026-11-08 复核（L1）：锚点全部正常，无使用事件，五条探针四条为是。第一条“references/ 只放 SOURCES.md”与现状不符：本仓已有两个技能在 references/ 放细节文档，本技能阶段六也一直允许这样做，探针写的不是真实约定。改为核对真正的约定（出处只记引用、细节由正文指路），正文阶段九的探针示例同步改写。
 - 2026-10-28 L3：`description` 划出"效果评估 / 人物蒸馏"的边界，并新增阶段零入口分流；随后把描述与正文里的外部技能名全部换成能力描述，让本技能单读即自包含。起因是"评审我这个技能"同时命中多个技能，而正文只有"造新"一条路，加载后拿到的流程与接口承诺不符。同步补了异常表、三测四行记录、TTL 分档与脚本到期判定对齐。
 
 ## healthcheck
@@ -31,7 +32,7 @@
 
 ```yaml
 review_every_days: 5
-last_reviewed: 2026-10-28
+last_reviewed: 2026-11-08
 version: 2.0.0
 
 anchor_path: template/SKILL.md
@@ -45,7 +46,7 @@ anchor_cmd: grep --version
 
 anchor_url: https://github.com/HrLoveFun/gourd
 
-probe: 仓库是否仍要求 references/ 只放 SOURCES.md（只记引用不抄原文）
+probe: 出处是否仍只记在 references/SOURCES.md、只记 MLA 引用不抄原文；references/ 的其余文件是否都由正文一句指路
 probe: skills/ 下是否仍只放能直接加载的真实技能，模板仍在根目录 template/
 probe: SKILL.md 的 name 是否仍须与父目录名完全一致
 probe: 500 行上限与 200KB 二进制不入库的约定是否仍然有效
