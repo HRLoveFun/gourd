@@ -127,7 +127,7 @@ anchor_cmd: git --version
 
 # 每条一个能被"是/否"回答的前提核对题；任一为否即前提已变
 probe: AGENTS.md 是否仍是主流 agent 的入口文件名；是否已出现取代它的统一约定（若改名，第 4 步与 doc-check.sh 的入口判断同时失效）
-probe: 本仓库是否仍要求 references/ 只放 SOURCES.md（若放开，L2 详情可考虑外置）
+probe: SKILL.md 是否接近 500 行上限；接近时把细节规则移到 references/、正文一句指路（本仓已有技能这样做）
 probe: 三档文档集是否仍够用；真实项目里出现过第四档需求吗
 probe: `AGENTS.md` 120 行 / 词表 50 行 / L1 200 行预算是否被现实证伪——反复超预算但内容确实必要吗
 probe: 写入时机表是否漏过真实事件；出现过「按表改完仍漂移」的案例吗
